@@ -3220,14 +3220,12 @@ function idleFrame(now){
   if(dotRip)drawDotRipple(now);
   requestAnimationFrame(idleFrame);
 }
-// 터치: 물방울 하나가 떨어지고, 그 자리의 수면이 점(dot)으로 된 원근 그리드로 드러나며 동심원 파장이 퍼진다
+// 터치: 그 자리의 수면이 점(dot)으로 된 원근 그리드로 드러나며 동심원 파장이 퍼진다
 let dotRip=null;
 function drawDotRipple(now){
-  const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=.42;
+  const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=0;
   const R=H*.22,sq=.42,sp=Math.max(10,R/9);        // same reach as the previous touch area, sparse dots
-  const fieldIn=clamp(t/.5,0,1),fieldOut=1-clamp((t-2.15)/.45,0,1);
-  // falling drop
-  if(t<FALL){const f=t/FALL,yy=cy-H*.3+H*.3*f*f,r=Math.max(2.2,sp*.32);fxc.fillStyle=`rgba(240,250,255,${.4+.6*f})`;fxc.beginPath();fxc.moveTo(cx,yy-r*2.6);fxc.quadraticCurveTo(cx+r,yy-r*.4,cx+r,yy+r*.2);fxc.arc(cx,yy+r*.2,r,0,Math.PI);fxc.quadraticCurveTo(cx-r,yy-r*.4,cx,yy-r*2.6);fxc.fill()}
+  const fieldIn=clamp(t/.25,0,1),fieldOut=1-clamp((t-1.75)/.45,0,1);
   const tt=Math.max(0,t-FALL),v=R*.55,k=Math.PI*2/(sp*3.1),A=sp*2.2*Math.exp(-tt/1.35);
   const alpha=fieldIn*fieldOut;if(alpha<=0)return;
   const rings=Math.floor(R/sp);
@@ -3251,8 +3249,8 @@ addEventListener('resize',()=>{if(idleRun)idleResize()});
 // 터치: 물이 튀고, 터치한 주변의 물결만 픽셀로 바뀐 뒤 다음 화면으로
 async function splashPixel(x,y){
   dotRip={x,y,t0:performance.now()};
-  setTimeout(()=>poke(x,y,160,3),reduce?0:420);          // the real water underneath answers the drop
-  await sleep(reduce?300:2450);
+  poke(x,y,160,3);          // the real water underneath answers the drop
+  await sleep(reduce?300:2050);
   const idle=$('idle');idle.style.transition='opacity .6s';idle.style.opacity='0';await sleep(600);
   dotRip=null;
 }
