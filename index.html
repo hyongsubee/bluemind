@@ -3224,11 +3224,8 @@ function idleFrame(now){
 let dotRip=null;
 function drawDotRipple(now){
   const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=.42;
-  const R=Math.min(W,H)*.62,sq=.36,sp=Math.max(9,Math.min(W,H)*.0125);
+  const R=H*.22,sq=.42,sp=Math.max(10,R/9);        // same reach as the previous touch area, sparse dots
   const fieldIn=clamp(t/.5,0,1),fieldOut=1-clamp((t-2.15)/.45,0,1);
-  // darken the water under the field so the white dots read like the reference (dark surface, light points)
-  const g=fxc.createRadialGradient(cx,cy,0,cx,cy,R);g.addColorStop(0,`rgba(4,14,22,${.74*fieldIn*fieldOut})`);g.addColorStop(.7,`rgba(4,14,22,${.5*fieldIn*fieldOut})`);g.addColorStop(1,'rgba(4,14,22,0)');
-  fxc.save();fxc.translate(cx,cy);fxc.scale(1,sq);fxc.translate(-cx,-cy);fxc.fillStyle=g;fxc.beginPath();fxc.arc(cx,cy,R,0,7);fxc.fill();fxc.restore();
   // falling drop
   if(t<FALL){const f=t/FALL,yy=cy-H*.3+H*.3*f*f,r=Math.max(2.2,sp*.32);fxc.fillStyle=`rgba(240,250,255,${.4+.6*f})`;fxc.beginPath();fxc.moveTo(cx,yy-r*2.6);fxc.quadraticCurveTo(cx+r,yy-r*.4,cx+r,yy+r*.2);fxc.arc(cx,yy+r*.2,r,0,Math.PI);fxc.quadraticCurveTo(cx-r,yy-r*.4,cx,yy-r*2.6);fxc.fill()}
   const tt=Math.max(0,t-FALL),v=R*.55,k=Math.PI*2/(sp*3.1),A=sp*2.2*Math.exp(-tt/1.35);
@@ -3241,8 +3238,8 @@ function drawDotRipple(now){
     for(let i=0;i<n;i++){const th=i/n*Math.PI*2+j*.37,sn=Math.sin(th),near=(sn+1)/2;
       const px=cx+r*Math.cos(th),py=cy+r*sn*sq-h*(.55+.45*near);
       const lift=clamp(Math.abs(h)/(sp*1.6),0,1);
-      fxc.globalAlpha=Math.min(1,alpha*edge*(.45+.45*near+.4*lift));fxc.fillStyle='#EAF6FF';
-      const d=(.9+1.1*near)*(1+.5*lift);fxc.fillRect(px-d/2,py-d/2,d,d)}}
+      fxc.globalAlpha=Math.min(1,alpha*edge*(.55+.35*near+.4*lift));fxc.fillStyle='#F4FBFF';
+      const d=(1.6+1.4*near)*(1+.45*lift);fxc.beginPath();fxc.arc(px,py,d/2,0,7);fxc.fill()}}
   fxc.globalAlpha=1;
 }
 setInterval(()=>{if(!idleRun||!GL_OK||PHOTO_IMGS.length<2||pix.r>0)return;
