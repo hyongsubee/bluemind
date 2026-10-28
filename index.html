@@ -3224,20 +3224,21 @@ function idleFrame(now){
 let dotRip=null;
 function drawDotRipple(now){
   const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=0;
-  const R=H*.22,sq=.42,sp=Math.max(10,R/9);        // same reach as the previous touch area, sparse dots
+  const R=H*.147,sp=Math.max(9,R/8);        // two-thirds of the previous reach; seen straight from above like the pool photo
   const fieldIn=clamp(t/.25,0,1),fieldOut=1-clamp((t-1.75)/.45,0,1);
-  const tt=Math.max(0,t-FALL),v=R*.55,k=Math.PI*2/(sp*3.1),A=sp*2.2*Math.exp(-tt/1.35);
+  const tt=Math.max(0,t-FALL),v=R*.6,k=Math.PI*2/(sp*3.1),A=sp*.85*Math.exp(-tt/1.35);
   const alpha=fieldIn*fieldOut;if(alpha<=0)return;
   const rings=Math.floor(R/sp);
   for(let j=0;j<=rings;j++){const r=j*sp,n=Math.max(1,Math.round(2*Math.PI*r/sp));
     const front=v*tt,ahead=r<front?1:Math.exp(-Math.pow((r-front)/(sp*1.5),2));
     const h=tt>0?A*Math.exp(-r/(R*.55))*Math.sin(k*r-tt*7.5)*ahead*(r<front+sp*2?1:0):0;
     const edge=1-Math.pow(r/R,2.2);
-    for(let i=0;i<n;i++){const th=i/n*Math.PI*2+j*.37,sn=Math.sin(th),near=(sn+1)/2;
-      const px=cx+r*Math.cos(th),py=cy+r*sn*sq-h*(.55+.45*near);
-      const lift=clamp(Math.abs(h)/(sp*1.6),0,1);
-      fxc.globalAlpha=Math.min(1,alpha*edge*(.55+.35*near+.4*lift));fxc.fillStyle='#F4FBFF';
-      const d=(1.6+1.4*near)*(1+.45*lift);fxc.beginPath();fxc.arc(px,py,d/2,0,7);fxc.fill()}}
+    // top-down view: the wave pushes dots outward/inward along the radius and makes the crests brighter and larger
+    for(let i=0;i<n;i++){const th=i/n*Math.PI*2+j*.37,rr=r+h;
+      const px=cx+rr*Math.cos(th),py=cy+rr*Math.sin(th);
+      const lift=clamp(Math.abs(h)/(sp*.5),0,1);
+      fxc.globalAlpha=Math.min(1,alpha*edge*(.28+.72*lift));fxc.fillStyle='#F4FBFF';
+      const d=2.2*(1+.7*lift);fxc.beginPath();fxc.arc(px,py,d/2,0,7);fxc.fill()}}
   fxc.globalAlpha=1;
 }
 setInterval(()=>{if(!idleRun||!GL_OK||PHOTO_IMGS.length<2||pix.r>0)return;
