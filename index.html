@@ -342,7 +342,7 @@ h2.q{font-size:var(--xl);font-weight:700;line-height:1.18;letter-spacing:-.02em;
 <section class="screen" id="mobile" hidden>
   <div class="top"><span class="show" style="font-size:12px">BLUE MIND PATTERN</span><span class="logos"><img class="hk" alt="홍익대학교"><img class="idas" alt="HONGIK IDAS"></span></div>
   <div id="mList" style="display:flex;flex-direction:column;gap:28px;width:100%;align-items:center"></div>
-  <p>저장이 되지 않으면 이미지를 길게 눌러 ‘사진에 저장’을 선택하세요.<br>2026 HONGIK IDAS DEGREE SHOW · 10.30 – 11.01</p>
+  <p>iPhone은 ‘이미지 저장’ → 공유 창에서 ‘이미지 저장’을 누르면 사진 앱에 저장됩니다.<br>저장이 되지 않으면 이미지를 길게 눌러 ‘사진에 저장’을 선택하세요.<br>2026 HONGIK IDAS DEGREE SHOW · 10.30 – 11.01</p>
 </section>
 
 <script>//---------------------------------------------------------------------
@@ -3058,33 +3058,30 @@ const Audio_={ctx:null,on:false,userOff:false,mode:'water',
   async file(url,dest){try{const r=await fetch(url);if(!r.ok)return false;const b=await this.ctx.decodeAudioData(await r.arrayBuffer());const s=this.ctx.createBufferSource();s.buffer=b;s.loop=true;s.connect(dest);s.start();return true}catch(e){return false}},
   // 대기: 끊김 없이 이어지는 잔잔한 물소리 — 낮은 수중 웅웅거림 + 찰랑거림 + 물방울
   synthWater(){const x=this.ctx,sr=x.sampleRate;
-    // seamless noise loop: the tail is cross-faded into the head so the loop point is inaudible
+    // 대기: 강·호수처럼 잔잔하게 흐르는 물. 파도처럼 밀려오는 큰 너울, 물방울 소리 없음
     const seamless=(sec,fill)=>{const L=Math.floor(sr*sec),N=Math.floor(sr*1.5),buf=x.createBuffer(2,L,sr);
       for(let ch=0;ch<2;ch++){const raw=fill(L+N),d=buf.getChannelData(ch);for(let i=0;i<L;i++)d[i]=raw[i];
         for(let i=0;i<N;i++){const f=i/N;d[i]=raw[L+i]*(1-f)+raw[i]*f}}return buf};
     const brown=n=>{const a=new Float32Array(n);let last=0;for(let i=0;i<n;i++){last=(last+.02*(Math.random()*2-1))/1.02;a[i]=last*3}return a};
-    const white=n=>{const a=new Float32Array(n);for(let i=0;i<n;i++)a[i]=Math.random()*2-1;return a};
-    const verb=x.createConvolver(),ir=x.createBuffer(2,sr*1.6,sr);for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3)}verb.buffer=ir;const vg=x.createGain();vg.gain.value=.25;verb.connect(vg);vg.connect(this.wG);
-    // 1) soft underwater bed (quiet, steady)
-    {const s=x.createBufferSource();s.buffer=seamless(20,brown);s.loop=true;const lp=x.createBiquadFilter();lp.type='lowpass';lp.frequency.value=260;const g=x.createGain();g.gain.value=.22;s.connect(lp);lp.connect(g);g.connect(this.wG);s.start()}
-    // 2) continuous lapping: a bright noise layer whose level gently rises and falls in overlapping swells
-    const lapBuf=seamless(12,white);
-    const lap=(t)=>{const s=x.createBufferSource();s.buffer=lapBuf;s.loop=true;const bp=x.createBiquadFilter();bp.type='bandpass';bp.frequency.value=700+Math.random()*900;bp.Q.value=.9;
-      const e=x.createGain(),p=x.createStereoPanner?x.createStereoPanner():null,dur=1.2+Math.random()*1.6,v=.035+Math.random()*.03;
-      e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(v,t+dur*.45);e.gain.linearRampToValueAtTime(0,t+dur);
-      bp.frequency.setValueAtTime(bp.frequency.value,t);bp.frequency.linearRampToValueAtTime(bp.frequency.value*.7,t+dur);
-      s.connect(bp);bp.connect(e);if(p){p.pan.value=Math.random()*1.4-.7;e.connect(p);p.connect(this.wG);p.connect(verb)}else{e.connect(this.wG)}
-      s.start(t,Math.random()*10);s.stop(t+dur+.05)};
-    // 3) water drops: quick upward "plink" with a soft tail
-    const drop=(t,f,v)=>{const o=x.createOscillator(),e=x.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.9,t+.035);o.frequency.exponentialRampToValueAtTime(f*1.6,t+.12);
-      e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(v,t+.004);e.gain.exponentialRampToValueAtTime(.0001,t+.16);
-      const p=x.createStereoPanner?x.createStereoPanner():null;o.connect(e);if(p){p.pan.value=Math.random()*1.6-.8;e.connect(p);p.connect(this.wG);p.connect(verb)}else e.connect(this.wG);o.start(t);o.stop(t+.2)};
-    // schedule on the audio clock so nothing stutters
-    let nLap=x.currentTime+.1,nDrop=x.currentTime+.8;
-    const sched=()=>{if(!this.ctx)return;const h=x.currentTime+1.5;
-      while(nLap<h){lap(nLap);nLap+=.45+Math.random()*.6}
-      while(nDrop<h){const k=Math.random()<.3?2:1;for(let j=0;j<k;j++)drop(nDrop+j*(.08+Math.random()*.1),700+Math.random()*900,.03+Math.random()*.025);nDrop+=.9+Math.random()*2.4}
-      setTimeout(sched,400)};sched()},
+    const pink=n=>{const a=new Float32Array(n);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;
+      b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;
+      a[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}return a};
+    const src=(buf)=>{const s=x.createBufferSource();s.buffer=buf;s.loop=true;s.start(0,Math.random()*buf.duration);return s};
+    const lfo=(hz,depth,param)=>{const o=x.createOscillator(),g=x.createGain();o.frequency.value=hz;g.gain.value=depth;o.connect(g);g.connect(param);o.start()};
+    // 1) deep, steady body of water
+    {const s=src(seamless(20,brown)),lp=x.createBiquadFilter(),g=x.createGain();lp.type='lowpass';lp.frequency.value=280;g.gain.value=.2;s.connect(lp);lp.connect(g);g.connect(this.wG)}
+    // 2) the soft "shhh" of water flowing past — a broad, slowly breathing band
+    {const s=src(seamless(16,pink)),bp=x.createBiquadFilter(),lp=x.createBiquadFilter(),g=x.createGain();
+      bp.type='bandpass';bp.frequency.value=850;bp.Q.value=.45;lp.type='lowpass';lp.frequency.value=2100;g.gain.value=.11;
+      lfo(.045,180,bp.frequency);lfo(.07,.025,g.gain);s.connect(bp);bp.connect(lp);lp.connect(g);g.connect(this.wG)}
+    // 3) a quiet babble close by — tiny, irregular level changes on a higher band (no droplets, no swells)
+    const bab=x.createGain();bab.gain.value=.012;
+    {const s=src(seamless(12,pink)),bp=x.createBiquadFilter(),p=x.createStereoPanner?x.createStereoPanner():null;bp.type='bandpass';bp.frequency.value=1500;bp.Q.value=1.1;
+      s.connect(bp);bp.connect(bab);if(p){lfo(.03,.5,p.pan);bab.connect(p);p.connect(this.wG)}else bab.connect(this.wG)}
+    let nB=x.currentTime+.2;
+    const sched=()=>{if(!this.ctx)return;const now=x.currentTime;if(nB<now)nB=now+.05;
+      while(nB<now+2){const v=.006+Math.random()*.02,d=.25+Math.random()*.55;bab.gain.setTargetAtTime(v,nB,d*.45);nB+=d}
+      setTimeout(sched,500)};sched()},
   // 체험: 낮게 깔리는 비트가 있는 딥하우스/다운템포 (호텔 로비·플래그십 스토어 무드)
   synthLounge(){const x=this.ctx,bpm=112,s16=60/bpm/4;
     const bus=x.createGain();bus.gain.value=.9;bus.connect(this.lG);
@@ -3103,14 +3100,14 @@ const Audio_={ctx:null,on:false,userOff:false,mode:'water',
     const chords=[[57,60,64,67,71],[53,57,60,64],[50,53,57,60,64],[52,55,59,62]];   // Am9 Fmaj7 Dm9 Em7
     const roots=[33,29,26,28], bassPat=[0,null,null,0,null,null,12,null,0,null,null,0,null,7,null,null];
     let step=0,next=x.currentTime+.1;
-    const sched=()=>{if(!this.ctx)return;while(next<x.currentTime+.6){const t=next,i=step%16,bar=Math.floor(step/16),ch=chords[bar%4];
+    const sched=()=>{if(!this.ctx)return;if(next<x.currentTime-.02){const skip=Math.ceil((x.currentTime+.05-next)/s16);next+=skip*s16;step+=skip}while(next<x.currentTime+1.6){const t=next,i=step%16,bar=Math.floor(step/16),ch=chords[bar%4];
         if(i%4===0)kick(t);
         if(i%4===2)hat(t,.06,.05); else if(i%2===1)hat(t,.022,.03);
         if(i===4||i===12)rim(t);
         if(bassPat[i]!==null)bass(t,roots[bar%4]+bassPat[i],s16*1.6);
         if(i===2||i===10)stab(t,ch,s16*2.5);
         if(bar%2===1&&(i===7||i===11||i===14))pluck(t,ch[(i+bar)%ch.length]+12);
-        next+=s16;step++}setTimeout(sched,150)};sched()},
+        next+=s16;step++}setTimeout(sched,250)};sched()},
   ensure(){this.init();if(!this.ctx)return;if(this.ctx.state!=='running')this.ctx.resume();if(!this.userOff&&!this.on){this.on=true;this.master.gain.linearRampToValueAtTime(.8,this.ctx.currentTime+.8)}},
   toggle(){this.init();if(!this.ctx)return;this.ctx.resume();this.on=!this.on;this.userOff=!this.on;const t=this.ctx.currentTime;this.master.gain.cancelScheduledValues(t);this.master.gain.linearRampToValueAtTime(this.on?.8:0,t+.5)},
   to(mode){if(!this.ctx||this.mode===mode)return;this.mode=mode;const t=this.ctx.currentTime;[[this.wG,mode==='water'],[this.lG,mode==='lounge']].forEach(([g,on])=>{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(on?1:0,t+3)})},
@@ -3442,7 +3439,11 @@ async function boot(){
     rs.forEach(k=>{const R=RATIOS.find(r=>r.k===k),c=document.createElement('canvas');renderCard(c,p,k,REP_T,1);
       const f=document.createElement('figure');f.innerHTML=`<img alt="나의 물의 경험 패턴 ${R.label}"><figcaption><b>${R.label}</b><button class="btn" type="button">이미지 저장 <span class="ar">↓</span></button></figcaption>`;
       f.querySelector('img').src=c.toDataURL('image/png');
-      f.querySelector('button').onclick=()=>c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`BlueMindPattern_${p.n||'water'}_${R.label.replace(':','x')}.png`;a.click()});
+      const fname=`BlueMindPattern_${p.n||'water'}_${R.label.replace(':','x')}.png`;let file=null;c.toBlob(b=>{file=new File([b],fname,{type:'image/png'})});
+      const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+      f.querySelector('button').onclick=async()=>{
+        if(file&&isIOS&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}
+        const go=bl=>{const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=fname;a.click()};file?go(file):c.toBlob(go)};
       L.appendChild(f)});
     return;
   }
