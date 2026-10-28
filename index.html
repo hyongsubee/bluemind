@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Blue Mind Pattern</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3213,7 +3217,33 @@ function idleFrame(now){
     if(p.z<=0&&p.vz<0){poke(p.x,p.y,40,1);drops.splice(k,1);continue}
     fxc.fillStyle='rgba(10,50,70,.16)';fxc.beginPath();fxc.ellipse(p.x+p.z*.35,p.y+p.z*.45,p.r,p.r*.8,0,0,7);fxc.fill();
     fxc.fillStyle='rgba(245,252,255,.92)';fxc.beginPath();fxc.ellipse(p.x,p.y-p.z*.55,p.r*(1+p.z/40),p.r*1.15*(1+p.z/40),0,0,7);fxc.fill()}
+  if(dotRip)drawDotRipple(now);
   requestAnimationFrame(idleFrame);
+}
+// 터치: 물방울 하나가 떨어지고, 그 자리의 수면이 점(dot)으로 된 원근 그리드로 드러나며 동심원 파장이 퍼진다
+let dotRip=null;
+function drawDotRipple(now){
+  const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=.42;
+  const R=Math.min(W,H)*.62,sq=.36,sp=Math.max(9,Math.min(W,H)*.0125);
+  const fieldIn=clamp(t/.5,0,1),fieldOut=1-clamp((t-2.15)/.45,0,1);
+  // darken the water under the field so the white dots read like the reference (dark surface, light points)
+  const g=fxc.createRadialGradient(cx,cy,0,cx,cy,R);g.addColorStop(0,`rgba(4,14,22,${.74*fieldIn*fieldOut})`);g.addColorStop(.7,`rgba(4,14,22,${.5*fieldIn*fieldOut})`);g.addColorStop(1,'rgba(4,14,22,0)');
+  fxc.save();fxc.translate(cx,cy);fxc.scale(1,sq);fxc.translate(-cx,-cy);fxc.fillStyle=g;fxc.beginPath();fxc.arc(cx,cy,R,0,7);fxc.fill();fxc.restore();
+  // falling drop
+  if(t<FALL){const f=t/FALL,yy=cy-H*.3+H*.3*f*f,r=Math.max(2.2,sp*.32);fxc.fillStyle=`rgba(240,250,255,${.4+.6*f})`;fxc.beginPath();fxc.moveTo(cx,yy-r*2.6);fxc.quadraticCurveTo(cx+r,yy-r*.4,cx+r,yy+r*.2);fxc.arc(cx,yy+r*.2,r,0,Math.PI);fxc.quadraticCurveTo(cx-r,yy-r*.4,cx,yy-r*2.6);fxc.fill()}
+  const tt=Math.max(0,t-FALL),v=R*.55,k=Math.PI*2/(sp*3.1),A=sp*2.2*Math.exp(-tt/1.35);
+  const alpha=fieldIn*fieldOut;if(alpha<=0)return;
+  const rings=Math.floor(R/sp);
+  for(let j=0;j<=rings;j++){const r=j*sp,n=Math.max(1,Math.round(2*Math.PI*r/sp));
+    const front=v*tt,ahead=r<front?1:Math.exp(-Math.pow((r-front)/(sp*1.5),2));
+    const h=tt>0?A*Math.exp(-r/(R*.55))*Math.sin(k*r-tt*7.5)*ahead*(r<front+sp*2?1:0):0;
+    const edge=1-Math.pow(r/R,2.2);
+    for(let i=0;i<n;i++){const th=i/n*Math.PI*2+j*.37,sn=Math.sin(th),near=(sn+1)/2;
+      const px=cx+r*Math.cos(th),py=cy+r*sn*sq-h*(.55+.45*near);
+      const lift=clamp(Math.abs(h)/(sp*1.6),0,1);
+      fxc.globalAlpha=Math.min(1,alpha*edge*(.45+.45*near+.4*lift));fxc.fillStyle='#EAF6FF';
+      const d=(.9+1.1*near)*(1+.5*lift);fxc.fillRect(px-d/2,py-d/2,d,d)}}
+  fxc.globalAlpha=1;
 }
 setInterval(()=>{if(!idleRun||!GL_OK||PHOTO_IMGS.length<2||pix.r>0)return;
   const n=(photoIdx+1)%PHOTO_IMGS.length;if(!PHOTO_IMGS[n].naturalWidth)return;
@@ -3223,13 +3253,11 @@ addEventListener('resize',()=>{if(idleRun)idleResize()});
 
 // 터치: 물이 튀고, 터치한 주변의 물결만 픽셀로 바뀐 뒤 다음 화면으로
 async function splashPixel(x,y){
-  poke(x,y,220,3);
-  if(!reduce)for(let k=0;k<26;k++){const a=Math.random()*7,sp=2+Math.random()*6.5;drops.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,z:0,vz:3+Math.random()*5.5,r:1.3+Math.random()*2.6})}
-  pix.x=x/innerWidth;pix.y=y/innerHeight;pix.b=.032;
-  const t1=performance.now(),grow=reduce?100:1300;
-  await new Promise(r=>{const step=now=>{const f=clamp((now-t1)/grow,0,1);pix.r=.03+.19*(1-Math.pow(1-f,2.4));pix.b=.022;if(f<1)requestAnimationFrame(step);else r()};requestAnimationFrame(step)});
-  await sleep(reduce?0:450);
+  dotRip={x,y,t0:performance.now()};
+  setTimeout(()=>poke(x,y,160,3),reduce?0:420);          // the real water underneath answers the drop
+  await sleep(reduce?300:2450);
   const idle=$('idle');idle.style.transition='opacity .6s';idle.style.opacity='0';await sleep(600);
+  dotRip=null;
 }
 
 /* =================== FLOW =================== */
@@ -3241,7 +3269,7 @@ function show(id){
   // a new visitor always starts the intro from its first panel (going back from Q1 keeps the last panel)
   if(id==='intro'&&prev!=='qPre'){const S=$('scroller');S.style.scrollBehavior='auto';S.scrollTop=0;void S.offsetHeight;S.style.scrollBehavior=''}
   $(id).querySelectorAll('.q-main,.res,.qrw').forEach(m=>{m.classList.remove('in');void m.offsetWidth;m.classList.add('in')});
-  screen=id;idleRun=id==='idle';if(idleRun){$('idle').style.opacity='';pix.r=0;drops.length=0;idleResize();lastMove=performance.now();requestAnimationFrame(idleFrame)}
+  screen=id;idleRun=id==='idle';if(idleRun){$('idle').style.opacity='';pix.r=0;drops.length=0;dotRip=null;idleResize();lastMove=performance.now();requestAnimationFrame(idleFrame)}
   if(id!=='res')cancelAnimationFrame(cardRaf);
   Audio_.to(id==='idle'?'water':'lounge');bumpIdle();
 }
