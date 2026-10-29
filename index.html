@@ -3397,7 +3397,7 @@ function loadRecs(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch
 function saveRecord(){if(state.optOut||state._saved===state.s)return;const d=derive(state);
   const r={time:new Date().toISOString(),nickname:state.n,experience:EXP[state.e].ko,emotions:state.m.map(i=>EMO[i][0]).join('|'),meaning:state.q===CUSTOM_Q?'직접입력':(state.q>=0?MEAN[state.q][0]:'건너뜀'),custom:state.q===CUSTOM_Q?state.t:'',pattern:d.exp.fam,composition:d.comp,density:d.dens,colors:d.inks.join(''),rating:state.rating||'',calm_before:state.pre||'',most_similar:state.sim,ratios:state.ratios.join('|')};
   try{const a=loadRecs();a.push(r);localStorage.setItem(KEY,JSON.stringify(a));state._saved=state.s}catch(e){}
-  if(CONFIG.SHEET_ENDPOINT){try{fetch(CONFIG.SHEET_ENDPOINT,{method:'POST',mode:'no-cors',body:JSON.stringify(r)})}catch(e){}}}
+  if(CONFIG.SHEET_ENDPOINT){try{fetch(CONFIG.SHEET_ENDPOINT,{method:'POST',mode:'no-cors',body:JSON.stringify(r)}).catch(()=>{})}catch(e){}}}
 function csv(){const a=loadRecs();if(!a.length)return'';const h=Object.keys(a[a.length-1]);return[h.join(','),...a.map(r=>h.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n')}
 addEventListener('keydown',e=>{if(e.shiftKey&&e.key.toLowerCase()==='d'&&!/INPUT/.test(document.activeElement.tagName))toggleAdmin()});
 function toggleAdmin(){let el=document.querySelector('.admin');if(el){el.remove();return}
