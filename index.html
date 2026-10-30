@@ -3287,7 +3287,7 @@ document.querySelectorAll('.steps').forEach(s=>{const n=+s.dataset.step;s.innerH
 // idle → intro
 $('idle').addEventListener('click',async e=>{
   if(e.target.closest('#soundBtn')||screen!=='idle'||$('idle').dataset.busy)return;$('idle').dataset.busy='1';
-  Audio_.ensure();syncSound();Audio_.blip();
+  Audio_.ensure();syncSound();
   await splashPixel(e.clientX,e.clientY);
   idleRun=false;delete $('idle').dataset.busy;
   resetState();show('intro');buildIntro();
