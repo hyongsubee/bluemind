@@ -24,6 +24,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;box-sizing:border-box;padding-block:max(22px,env(safe-area-inset-top,0px)) max(22px,env(safe-area-inset-bottom,0px));padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px));overflow:hidden}
 .screen[hidden]{display:none!important}
+.grain{position:fixed;}
+body:has(#idle.vid:not([hidden])) .grain{display:none}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.28;mix-blend-mode:multiply;z-index:40;
  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .2 0 0 0 0 .2 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .in{animation:fin .7s cubic-bezier(.2,.7,.2,1) both}
@@ -3058,10 +3060,10 @@ for(const k of Object.keys(FAM)){const f=FAM[k];FAM[k]=function(c,r,d,t,R){
 let VID_OK=false,GESTURE=false;
 addEventListener('pointerdown',()=>{if(!GESTURE){GESTURE=true;setTimeout(()=>{if(typeof syncIdleVideo==='function')syncIdleVideo()},0)}},{capture:true});
 (function(){const v=document.getElementById('idleVid');if(!CONFIG.IDLE_VIDEO||!v)return;VID_OK=true;document.getElementById('idle').classList.add('vid');
-  // WebM first (smaller), MP4 as fallback; if neither can play, fall back to the water shader
+  // MP4(H.264) first — hardware-decoded on every Mac, so the detailed 윤슬 scene plays without dropped frames; WebM as fallback; if neither can play, fall back to the water shader
   const fail=()=>{VID_OK=false;document.getElementById('idle').classList.remove('vid');v.pause();v.remove()};
   const base=CONFIG.IDLE_VIDEO.replace(/\.(mp4|webm)$/,'');
-  [['webm','video/webm'],['mp4','video/mp4']].forEach(([ext,type],i,arr)=>{const so=document.createElement('source');so.src=base+'.'+ext;so.type=type;if(i===arr.length-1)so.addEventListener('error',fail,{once:true});v.appendChild(so)});
+  [['mp4','video/mp4'],['webm','video/webm']].forEach(([ext,type],i,arr)=>{const so=document.createElement('source');so.src=base+'.'+ext;so.type=type;if(i===arr.length-1)so.addEventListener('error',fail,{once:true});v.appendChild(so)});
   v.load();})();
 /* =================== AUDIO =================== */
 const Audio_={ctx:null,on:false,userOff:false,mode:'water',
@@ -3209,6 +3211,7 @@ $('idle').addEventListener('pointermove',e=>{const now=performance.now();lastMov
 $('idle').addEventListener('pointerleave',()=>{lp=null});
 function idleFrame(now){
   if(!idleRun)return;
+  if(VID_OK){if(dotRip||fxDirty){fxc.clearRect(0,0,fx.width,fx.height);fxDirty=false;if(dotRip){drawDotRipple(now);fxDirty=true}}requestAnimationFrame(idleFrame);return}
   if(now-lastMove>3000&&Math.random()<.012)poke(Math.random()*innerWidth,Math.random()*innerHeight,50,1);
   for(let y=1;y<RH-1;y++){let i=y*RW+1;for(let x=1;x<RW-1;x++,i++)RB[i]=((RA[i-1]+RA[i+1]+RA[i-RW]+RA[i+RW])*.5-RB[i])*.975}
   const T=RA;RA=RB;RB=T;
@@ -3232,7 +3235,7 @@ function idleFrame(now){
   requestAnimationFrame(idleFrame);
 }
 // 터치: 그 자리의 수면이 점(dot)으로 된 원근 그리드로 드러나며 동심원 파장이 퍼진다
-let dotRip=null;
+let dotRip=null,fxDirty=false;
 function drawDotRipple(now){
   const {x:cx,y:cy,t0:T0}=dotRip,W=innerWidth,H=innerHeight,t=(now-T0)/1000,FALL=0;
   const R=H*.147,sp=Math.max(9,R/8);        // two-thirds of the previous reach; seen straight from above like the pool photo
