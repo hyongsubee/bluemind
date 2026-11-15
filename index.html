@@ -3469,3 +3469,81 @@ async function boot(){
 }
 boot();
 </script>
+<script>
+/* =================== GALLERY MODE (?gallery) — 큐레이션용 표현 범위 매트릭스. 키오스크 흐름에는 영향 없음 =================== */
+(function(){
+if(!new URLSearchParams(location.search).has('gallery'))return;
+const POS=[...Array(15).keys()];                       // 긍정 감정 15개 (두려움·압도감·차가움 제외)
+const COMP_Q={full:5,margin:0,center:1,rise:2,overlap:3};
+const COMPS=['full','margin','center','rise','overlap'];
+const MOODS=[{k:'calm',ko:'차분 (성김·느림)',ar:0,dens:0},{k:'full-calm',ko:'수정안: 가득 찬 잔잔함 (촘촘·느림)',ar:0,dens:2},{k:'excited',ko:'들뜸 (촘촘·빠름)',ar:2,dens:2}];
+const TOP_INK=['G','U','Q','E','L','F'];               // 졸전 상위 감정 색: 편안함·평온함·자유로움/시원함·여유·해방감·상쾌함
+const PAIR_INK=['C','P','A','O','H','N'];              // 레퍼런스 짝 색 후보: Paper·Baby Pink·Amber·Orange·Lavender·Ink
+const T=REP_T,S=420;
+const base={n:'',s:1,t:''};
+const mk=(e,m,q)=>derive(Object.assign({},base,{e,m,q}));
+// pattern-only square: the card's composition rule, without the text band (what a product surface would carry)
+function draw(cv,d){cv.width=cv.height=S;const c=cv.getContext('2d'),R=rng(d.seed),RR=Array.from({length:24},()=>R());
+  const art={x:0,y:0,w:S,h:S},m=S*.07,f=(r,dd,rr)=>{c.save();FAM[d.exp.fam](c,r,dd||d,T,rr||RR);c.restore()},clip=r=>{c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip()};
+  c.fillStyle=d.ground;c.fillRect(0,0,S,S);
+  if(d.comp==='full'){c.save();clip(art);f(art);c.restore()}
+  else if(d.comp==='margin'){const r={x:m*.4,y:S*.45,w:S-m*1.4,h:S*.48};c.save();clip(r);f(r);c.restore()}
+  else if(d.comp==='center'){const rad=S*.42;c.save();c.beginPath();c.arc(S/2,S/2,rad,0,7);c.clip();f({x:S/2-rad,y:S/2-rad,w:rad*2,h:rad*2});c.restore()}
+  else if(d.comp==='rise'){const D=Math.hypot(S,S);c.save();clip(art);c.translate(S/2,S/2);c.rotate(-.28);c.translate(-S/2,-S/2);c.fillStyle=d.ground;c.fillRect(S/2-D/2,S/2-D/2,D,D);f({x:S/2-D/2,y:S/2-D/2,w:D,h:D});c.restore()}
+  else if(d.comp==='overlap'){const a={x:0,y:0,w:S*.72,h:S*.78},b={x:S*.28,y:S*.22,w:S*.72,h:S*.78};c.save();clip(a);f(a);c.restore();c.save();clip(b);f(b,Object.assign({},d,{fig:d.acc,ground:'rgba(0,0,0,0)'}),RR.slice().reverse());c.restore()}
+  c.save();c.globalAlpha=.16;c.globalCompositeOperation='multiply';c.fillStyle=c.createPattern(GRAIN,'repeat');c.fillRect(0,0,S,S);c.restore()}
+const famKo=e=>EXP[e].famKo, inkName=k=>INK[k].name;
+// ---- matrices: each returns {title, note, cols, rows, cells:[{d,label,file,row,col}]}
+const M={
+ A:()=>({title:'A. 형태 × 색',note:'경험 5 × 긍정 감정 15 (감정 1개, 전면형). 각성은 감정에 따름',
+   rows:EXP.map(x=>x.ko),cols:POS.map(i=>EMO[i][0]),
+   cells:EXP.flatMap((x,e)=>POS.map((i,j)=>{const d=mk(e,[i],5);return{d,row:e,col:j,label:`${x.ko} · ${EMO[i][0]}`,file:`A_${x.fam}_${EMO[i][1]}`}}))}),
+ B:()=>({title:'B. 형태 × 성격 × 구도',note:'대표색 평온함(Cobalt) 고정. 행: 경험 × 성격 3단계(차분 / 수정안 / 들뜸), 열: 구도 5',
+   rows:EXP.flatMap(x=>MOODS.map(md=>`${x.ko} · ${md.ko}`)),cols:COMPS.map(k=>COMP_KO[k]),
+   cells:EXP.flatMap((x,e)=>MOODS.flatMap((md,mi)=>COMPS.map((k,j)=>{const d=Object.assign(mk(e,[0],COMP_Q[k]),{ar:md.ar,dens:md.dens});
+     return{d,row:e*MOODS.length+mi,col:j,label:`${x.ko} · ${md.ko} · ${COMP_KO[k]}`,file:`B_${x.fam}_${md.k}_${k}`}})))}),
+ C:()=>({title:'C. 배색',note:'2색 조합만 (바탕 + 짝 색). 형태: 조용히 떠있기, 전면형, 차분. 행: 바탕색(졸전 상위 감정 색), 열: 짝 색',
+   rows:TOP_INK.map(inkName),cols:PAIR_INK.map(inkName),
+   cells:TOP_INK.flatMap((g,r)=>PAIR_INK.map((p,j)=>{const d=Object.assign(mk(1,[5],5),{ar:0,dens:0,ground:INK[g].hex,fig:INK[p].hex,acc:INK[p].hex});   // 2색만: 바탕 + 짝 색
+     return{d,row:r,col:j,label:`${inkName(g)} + ${inkName(p)}`,file:`C_${inkName(g)}_${inkName(p)}`.replace(/ /g,'')}}))}),
+};
+// ---- UI
+const css=`#gal{position:fixed;inset:0;z-index:9999;background:#F2F1EC;color:#1C1C1E;overflow:auto;font:14px/1.45 Archivo,"Noto Sans KR",sans-serif;padding:28px 32px 60px}
+#gal header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:6px}#gal h1{font:700 22px Cinzel,serif;margin:0 12px 0 0;letter-spacing:.04em}
+#gal button{font:inherit;border:1px solid #1C1C1E;background:transparent;padding:6px 14px;border-radius:999px;cursor:pointer}#gal button.on{background:#1C1C1E;color:#F2F1EC}
+#gal .note{color:#55565A;margin:4px 0 18px}#gal .grid{display:grid;gap:10px 8px;align-items:start}
+#gal .hd{font-weight:600;font-size:12px;color:#55565A;align-self:end;padding-bottom:2px}#gal .rh{font-weight:600;font-size:12px;color:#55565A;align-self:center;padding-right:8px}
+#gal figure{margin:0}#gal canvas{width:100%;height:auto;display:block;cursor:zoom-in}#gal figcaption{font-size:11px;color:#55565A;margin-top:3px}#gal.nolabel figcaption{display:none}
+#gal .big{position:fixed;inset:0;background:rgba(28,28,30,.86);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#F2F1EC;z-index:10000;cursor:zoom-out}#gal .big canvas{width:min(80vh,80vw);height:auto}`;
+const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+const g=document.createElement('div');g.id='gal';document.body.appendChild(g);
+try{const v=document.getElementById('idleVid');v&&v.pause();document.querySelectorAll('.screen').forEach(s=>s.hidden=true)}catch(e){}
+let cur=new URLSearchParams(location.search).get('gallery');if(!M[cur])cur='A';
+function sheet(mx){// whole matrix as one labelled PNG
+  const cs=200,gap=12,lw=300,th=110,cap=22,W=lw+mx.cols.length*(cs+gap)+40,H=th+40+mx.rows.length*(cs+gap+cap)+40;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');c.fillStyle='#F2F1EC';c.fillRect(0,0,W,H);c.fillStyle='#1C1C1E';
+  c.font='700 34px Cinzel, serif';c.fillText('BLUE MIND PATTERN — '+mx.title,40,58);c.font='400 20px Archivo, "Noto Sans KR", sans-serif';c.fillStyle='#55565A';c.fillText(mx.note,40,92);
+  c.font='600 18px Archivo, "Noto Sans KR", sans-serif';mx.cols.forEach((t,j)=>c.fillText(t,lw+j*(cs+gap),th+28));
+  mx.rows.forEach((t,r)=>{const y=th+40+r*(cs+gap+cap);c.fillStyle='#55565A';const ws=t.split(' · ');ws.forEach((w,k)=>c.fillText(w,40,y+cs/2-((ws.length-1)*12)+k*24))});
+  mx.cells.forEach(o=>{const x=lw+o.col*(cs+gap),y=th+40+o.row*(cs+gap+cap);c.drawImage(o.cv,x,y,cs,cs)});return cv}
+function dl(cv,name){cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name+'.png';a.click()})}
+function render(){const mx=M[cur]();
+  g.innerHTML=`<header><h1>Gallery</h1>${Object.keys(M).map(k=>`<button data-k="${k}" class="${k===cur?'on':''}">${M[k]().title}</button>`).join('')}
+   <span style="flex:1"></span><button id="gLab">라벨 ${g.classList.contains('nolabel')?'켜기':'끄기'}</button><button id="gSheet">시트 PNG 저장</button></header>
+   <p class="note">${mx.note} · ${mx.cells.length}장 · 카드를 누르면 크게 보고 저장할 수 있어요</p><div class="grid"></div>`;
+  const gr=g.querySelector('.grid');gr.style.gridTemplateColumns=`minmax(120px,190px) repeat(${mx.cols.length},minmax(90px,1fr))`;
+  gr.insertAdjacentHTML('beforeend','<div></div>'+mx.cols.map(t=>`<div class="hd">${t}</div>`).join(''));
+  mx.rows.forEach((t,r)=>{gr.insertAdjacentHTML('beforeend',`<div class="rh">${t.replace(' · ','<br>')}</div>`);
+    mx.cells.filter(o=>o.row===r).sort((a,b)=>a.col-b.col).forEach(o=>{const f=document.createElement('figure'),cv=document.createElement('canvas');draw(cv,o.d);o.cv=cv;
+      f.appendChild(cv);f.insertAdjacentHTML('beforeend',`<figcaption>${o.label}</figcaption>`);gr.appendChild(f);
+      cv.onclick=()=>{const b=document.createElement('div');b.className='big';const big=document.createElement('canvas');big.getContext('2d');big.width=big.height=S;big.getContext('2d').drawImage(cv,0,0);
+        b.appendChild(big);b.insertAdjacentHTML('beforeend',`<div>${o.label}</div>`);const sv=document.createElement('button');sv.textContent='이 카드 PNG 저장';sv.style.cssText='color:#F2F1EC;border-color:#F2F1EC';
+        sv.onclick=e=>{e.stopPropagation();const hi=document.createElement('canvas');const keep=S;draw(hi,o.d);dl(hi,o.file)};b.appendChild(sv);b.onclick=()=>b.remove();g.appendChild(b)}})});
+  g.querySelectorAll('header [data-k]').forEach(b=>b.onclick=()=>{cur=b.dataset.k;history.replaceState(null,'','?gallery='+cur);render()});
+  g.querySelector('#gLab').onclick=()=>{g.classList.toggle('nolabel');render()};
+  g.querySelector('#gSheet').onclick=()=>dl(sheet(mx),'BlueMindPattern_Gallery_'+cur);
+  window.__GAL={mx,sheet,draw};
+}
+(document.fonts?document.fonts.ready:Promise.resolve()).then(render);
+})();
+</script>
