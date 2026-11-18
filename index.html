@@ -3486,7 +3486,8 @@ const mk=(e,m,q)=>derive(Object.assign({},base,{e,m,q}));
 function draw(cv,d){cv.width=cv.height=S;const c=cv.getContext('2d'),R=rng(d.seed),RR=Array.from({length:24},()=>R());
   const art={x:0,y:0,w:S,h:S},m=S*.07,f=(r,dd,rr)=>{c.save();FAM[d.exp.fam](c,r,dd||d,T,rr||RR);c.restore()},clip=r=>{c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip()};
   c.fillStyle=d.ground;c.fillRect(0,0,S,S);
-  if(d.comp==='full'){c.save();clip(art);f(art);c.restore()}
+  if(d.stripe){const n=8,b=S/n;c.fillStyle=d.fig;for(let i=0;i<n;i++)c.fillRect(0,i*b+b/2,S,b/2)}   // 배색 전용: 같은 굵기의 가로 스트라이프
+  else if(d.comp==='full'){c.save();clip(art);f(art);c.restore()}
   else if(d.comp==='margin'){const r={x:m*.4,y:S*.45,w:S-m*1.4,h:S*.48};c.save();clip(r);f(r);c.restore()}
   else if(d.comp==='center'){const rad=S*.42;c.save();c.beginPath();c.arc(S/2,S/2,rad,0,7);c.clip();f({x:S/2-rad,y:S/2-rad,w:rad*2,h:rad*2});c.restore()}
   else if(d.comp==='rise'){const D=Math.hypot(S,S);c.save();clip(art);c.translate(S/2,S/2);c.rotate(-.28);c.translate(-S/2,-S/2);c.fillStyle=d.ground;c.fillRect(S/2-D/2,S/2-D/2,D,D);f({x:S/2-D/2,y:S/2-D/2,w:D,h:D});c.restore()}
@@ -3502,9 +3503,9 @@ const M={
    rows:EXP.flatMap(x=>MOODS.map(md=>`${x.ko} · ${md.ko}`)),cols:COMPS.map(k=>COMP_KO[k]),
    cells:EXP.flatMap((x,e)=>MOODS.flatMap((md,mi)=>COMPS.map((k,j)=>{const d=Object.assign(mk(e,[0],COMP_Q[k]),{ar:md.ar,dens:md.dens});
      return{d,row:e*MOODS.length+mi,col:j,label:`${x.ko} · ${md.ko} · ${COMP_KO[k]}`,file:`B_${x.fam}_${md.k}_${k}`}})))}),
- C:()=>({title:'C. 배색',note:'2색 조합만 (바탕 + 짝 색). 형태: 조용히 떠있기, 전면형, 차분. 행: 바탕색(졸전 상위 감정 색), 열: 짝 색',
+ C:()=>({title:'C. 배색',note:'2색 조합만 (바탕 + 짝 색). 형태 없이 같은 굵기의 가로 스트라이프. 행: 바탕색(졸전 상위 감정 색), 열: 짝 색',
    rows:TOP_INK.map(inkName),cols:PAIR_INK.map(inkName),
-   cells:TOP_INK.flatMap((g,r)=>PAIR_INK.map((p,j)=>{const d=Object.assign(mk(1,[5],5),{ar:0,dens:0,ground:INK[g].hex,fig:INK[p].hex,acc:INK[p].hex});   // 2색만: 바탕 + 짝 색
+   cells:TOP_INK.flatMap((g,r)=>PAIR_INK.map((p,j)=>{const d=Object.assign(mk(1,[5],5),{ar:0,dens:0,ground:INK[g].hex,fig:INK[p].hex,acc:INK[p].hex,stripe:true});   // 2색만: 바탕 + 짝 색, 형태 없이 단순 스트라이프
      return{d,row:r,col:j,label:`${inkName(g)} + ${inkName(p)}`,file:`C_${inkName(g)}_${inkName(p)}`.replace(/ /g,'')}}))}),
 };
 // ---- UI
